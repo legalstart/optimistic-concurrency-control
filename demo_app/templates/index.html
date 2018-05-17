@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js"></script>
+  </head>
+  <body style="background-color: rgb(255,255, 204)">
+    <form id="editForm">
+      <input type="text" style="font-size:25px;height:200px; width: 400px;" name="text"  />
+    </form>
+    <span id="message" style="font-size:25px"></span>
+    <br />
+    <br />
+    <span id="etag" style="font-size:25px"></span>
+    <script>
+      let etag = undefined
+      $.get('api/document/1', null, function(data, status, xhr) {
+        $("#editForm").find('input[name="text"]').val(data.text)
+        etag = xhr.getResponseHeader("etag")
+        $("#etag").empty().append("Current token: " + etag);
+      })
+
+      $("#editForm").submit(function(event) {
+        event.preventDefault()
+        const $form = $(this)
+        const val = $form.find('input[name="text"]').val()
+
+        const request = $.ajax({
+          url: 'api/document/1',
+          type: 'PUT',         
+          beforeSend: function(request) {
+            request.setRequestHeader("If-Match", etag);
+          },
+          data: { text: val },
+        })
+        request.done(function(data, status, xhr) {
+          $("#message").empty().append(val + " correctly sent");
+          etag = xhr.getResponseHeader("etag")
+          $("#etag").empty().append("Current token: " + etag);
+        })
+        request.fail(function(xhr) {
+          if (xhr.status === 412) {
+            $("#message").empty().append("Error 412! You are working on an outdated resource!");
+          } else {
+            $("#message").empty().append("Unknown error");
+          }
+        })
+      })
+    </script>
+
+  </body>
+</html>
